@@ -7,6 +7,7 @@ from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics import accuracy_score,roc_auc_score,classification_report,confusion_matrix,roc_curve,root_mean_squared_error
 from xgboost import XGBClassifier
 import pickle
+import bentoml
 
 
 # Data Preparation Part
@@ -107,7 +108,7 @@ def evaluate(model, X_train, X_test, Y_train, Y_test):
 
 evaluate(model, X_train, X_test, Y_train, Y_test)
 # Model Saving Part
-def model_saving(model, dv,df, model_path='xgboost_model.bin', dv_path='dv.bin',data_path='preprocessed_data.csv'):
+def model_saving_pickle(model, dv,df, model_path='employee_attrition_model.bin', dv_path='employee_dict_vectorizer.bin',data_path='preprocessed_data.csv'):
     print("Saving the model and DictVectorizer...")
     df.to_csv(data_path, index=False)
     with open(model_path, 'wb') as f_out:
@@ -118,6 +119,13 @@ def model_saving(model, dv,df, model_path='xgboost_model.bin', dv_path='dv.bin',
     print(f"✅ DictVectorizer saved to {dv_path}")
     print(f"✅ Cleaned dataset saved to {data_path}")
 
-model_saving(model,dv,df)
+
+def model_saving_bentoml(model,dv,df, model_path='employee_attrition_model.bin', dv_path='employee_dict_vectorizer.bin',data_path='preprocessed_data.csv'):
+    print("Saving the model and DictVectorizer...")
+    df.to_csv(data_path, index=False)
+    bentoml.sklearn.save_model(dv_path, dv)
+    bentoml.sklearn.save_model(model_path, model)
+model_saving_pickle(model,dv,df)
+model_saving_bentoml(model,dv,df)
 
 print("✅All tasks completed successfully.")
