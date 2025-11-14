@@ -298,5 +298,4 @@ docker run -p 8000:8000 attrition-app
 
 - ✔ SVM achieved **best accuracy**  
 - ✔ XGBoost used for **deployment (fast + optimized)**  
-- ✔ End-to-end pipeline completed  
-- ✔ Perfect for ML project submission 
+ 
