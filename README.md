@@ -160,7 +160,7 @@ python train.py
 
 # ⚡ 7. FastAPI Deployment (Backend)
 
-API is implemented in **main.py**.
+API is implemented in **main.py**.<br>
 **API** Link : https://ibm-hr-midterm-project.onrender.com/docs
 
 ### Run API:
@@ -178,7 +178,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 # 🎨 8. Streamlit Deployment (Frontend)
 
-Frontend implemented in **Streamlit.py**.
+Frontend implemented in **Streamlit.py**.<br>
 **Streamlit.py** Link : https://ibm-hr-analytic-attrition.streamlit.app/
 
 ### Launch Streamlit UI:
@@ -211,7 +211,7 @@ uv pip install -r requirements.txt
 
 # 🐳 10. Dockerization
 
-Project includes a full **Dockerfile**.
+Project includes a full **Dockerfile**. <br>
 **Dockerfile** Link : https://hub.docker.com/repository/docker/ayushgurjar10/ibm_hr_midterm_project/general
 
 ### Build image:
