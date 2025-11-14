@@ -5,14 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import math
-from urllib.parse import urljoin
 
-# === CONFIG ===
 FASTAPI_URL = "https://ibm-hr-midterm-project.onrender.com/predict"  # change if needed
-# Health endpoint will try FASTAPI_URL base + /health, falling back to root or /ping
-DEFAULT_MAX_WAIT_SECONDS = 120      # total poll/wait time (in seconds) when waking backend
-POLL_INTERVAL_SECONDS = 5           # how often to poll
-SINGLE_TRY_TIMEOUT = 8              # per-request timeout (seconds)
 
 st.set_page_config(page_title="Employee Attrition — Predict & Visualize",
                    layout="wide",
@@ -76,16 +70,6 @@ st.markdown('<div class="card"><div class="title">🏢 Employee Attrition Predic
             '<div class="subtitle">Fill employee details (left) and click Predict. See charts & summary on the right.</div></div>',
             unsafe_allow_html=True)
 
-
-# Sidebar controls for wake behaviour
-with st.sidebar:
-    st.header("Backend / Wake settings")
-    max_wait = st.number_input("Max wait (seconds)", min_value=30, max_value=600, value=DEFAULT_MAX_WAIT_SECONDS, step=10)
-    poll_interval = st.number_input("Poll interval (s)", min_value=1, max_value=30, value=POLL_INTERVAL_SECONDS, step=1)
-    single_try_timeout = st.number_input("Single request timeout (s)", min_value=1, max_value=30, value=SINGLE_TRY_TIMEOUT, step=1)
-    st.markdown("---")
-    st.markdown("If your Render/hosted service often takes long to wake, increase the max wait time above.")
-    st.button("Reset to defaults", on_click=lambda: st.experimental_rerun())
 
 left_col, right_col = st.columns([1, 1.2], gap="large")
 
@@ -157,44 +141,17 @@ with left_col:
         with w3:
             yearswithcurrmanager = st.number_input("Years with Current Manager", min_value=0, max_value=60, value=1)
 
-        # Wake backend now button (lightweight ping)
-        ping_col1, ping_col2 = st.columns([0.6, 0.4])
-        with ping_col1:
-            wake_now = st.button("🔔 Wake backend now")
-        with ping_col2:
-            st.markdown("<div style='font-size:12px;color:#64748b;margin-top:6px;'>Use before Predict to reduce wait time</div>", unsafe_allow_html=True)
-
         submit_btn = st.form_submit_button("Predict")
 
 with right_col:
     
     result_card = st.empty()
     charts_card = st.empty()
-    wake_status = st.empty()
 
-# Helper utilities
-def _base_url_from_predict(url):
-    # Attempt to derive base (scheme + netloc) for health checks
-    # If predict path exists, remove it
-    if url.endswith("/predict"):
-        return url[:-len("/predict")]
-    return url
+if 'submit_btn' not in st.session_state:
+    st.session_state['submit_btn'] = False
 
-def _try_health_check(base_url, timeout=3):
-    # Try common health endpoints: /health, /ping, root
-    candidates = ["/health", "/ping", "/"]
-    for path in candidates:
-        try:
-            test_url = urljoin(base_url + "/", path.lstrip("/"))
-            resp = requests.get(test_url, timeout=timeout)
-            if resp.status_code == 200:
-                # If JSON, good. If text, also accept.
-                return True, resp
-        except Exception:
-            continue
-    return False, None
-
-def _post_payload_with_timeout(url, payload, timeout_seconds=8):
+def _post_payload_with_timeout(url, payload, timeout_seconds=10):
     """
     Try to POST once with given timeout. Return (success_bool, response_or_exception)
     """
@@ -217,24 +174,7 @@ def _verify_response_json(resp):
     except Exception:
         return False
 
-# Wake-now button logic
-if 'last_wake_time' not in st.session_state:
-    st.session_state['last_wake_time'] = 0
-
-if wake_now:
-    base = _base_url_from_predict(FASTAPI_URL)
-    wake_status.markdown('<div class="card"><strong>Info</strong><div style="color:#475569">Attempting to wake backend (health ping)...</div></div>', unsafe_allow_html=True)
-    ok, resp = _try_health_check(base, timeout=5)
-    if ok:
-        st.session_state['last_wake_time'] = time.time()
-        wake_status.markdown('<div class="card"><strong style="color:#059669">Awake</strong><div style="color:#475569">Health endpoint responded — backend seems awake.</div></div>', unsafe_allow_html=True)
-    else:
-        wake_status.markdown('<div class="card"><strong style="color:#f59e0b">No response</strong><div style="color:#475569">No health endpoint response detected. The server may still be waking. Try again or press Predict (app will auto-poll).</div></div>', unsafe_allow_html=True)
-
-if 'submit_btn' not in st.session_state:
-    st.session_state['submit_btn'] = False
-
-# MAIN: handle form submission with wake/poll behavior
+# Main submission logic with wake/poll handling
 if submit_btn:
     payload = {
         "age": int(age),
@@ -269,10 +209,10 @@ if submit_btn:
         "yearswithcurrmanager": int(yearswithcurrmanager),
     }
 
-    # Use values from sidebar controls
-    MAX_WAIT_SECONDS = int(max_wait)
-    POLL_INTERVAL_SECONDS = int(poll_interval)
-    SINGLE_TRY_TIMEOUT = int(single_try_timeout)
+    # Configurable parameters
+    MAX_WAIT_SECONDS = 90          # how long we will poll/wait total (adjustable)
+    POLL_INTERVAL_SECONDS = 5      # how often to retry
+    SINGLE_TRY_TIMEOUT = 8        # timeout for each POST try
 
     start_time = time.time()
     deadline = start_time + MAX_WAIT_SECONDS
@@ -282,39 +222,30 @@ if submit_btn:
     progress_bar = st.empty()
     progress_text = st.empty()
 
-    # Show initial info
+    # Initial immediate attempt (fast)
     wake_card.markdown(
-        '<div class="card"><strong>Info</strong><div style="color:#475569">Sending request to backend — if the service is sleeping it may take some time to wake up. Approx wait: up to ~{} seconds.</div></div>'.format(MAX_WAIT_SECONDS),
+        '<div class="card"><strong>Info</strong><div style="color:#475569">Sending request to backend — if the service is sleeping it may take up to ~1 minute to wake up.</div></div>',
         unsafe_allow_html=True
     )
 
-    base = _base_url_from_predict(FASTAPI_URL)
-
-    # First try: attempt a lightweight health GET to avoid POST before server ready
-    health_ok, health_resp = _try_health_check(base, timeout=3)
+    # Try once right away
+    success, resp_or_exc = _post_payload_with_timeout(FASTAPI_URL, payload, timeout_seconds=SINGLE_TRY_TIMEOUT)
     verified = False
     resp = None
 
-    if health_ok:
-        # fast-path: health responded — go ahead and POST once
-        success, resp_or_exc = _post_payload_with_timeout(FASTAPI_URL, payload, timeout_seconds=SINGLE_TRY_TIMEOUT)
-        if success and _verify_response_json(resp_or_exc):
-            verified = True
-            resp = resp_or_exc
-    else:
-        # No health response — attempt a first POST in case the server accepts POST immediately
-        success, resp_or_exc = _post_payload_with_timeout(FASTAPI_URL, payload, timeout_seconds=SINGLE_TRY_TIMEOUT)
-        if success and _verify_response_json(resp_or_exc):
-            verified = True
-            resp = resp_or_exc
+    if success:
+        resp = resp_or_exc
+        verified = _verify_response_json(resp)
 
-    # If first attempts didn't give validated response, poll
-    if not verified:
+    # If first try didn't succeed or not verified, enter poll loop
+    if not success or not verified:
         elapsed = time.time() - start_time
+        # show progress bar initial state
         progress = 0.0
         progress_bar.progress(int(progress * 100))
         while time.time() < deadline:
             remaining = int(deadline - time.time())
+            # display dynamic status
             mins = remaining // 60
             secs = remaining % 60
             progress = min(1.0, (time.time() - start_time) / MAX_WAIT_SECONDS)
@@ -324,46 +255,39 @@ if submit_btn:
                 unsafe_allow_html=True
             )
 
-            # Try health endpoint first (fast)
-            health_ok, health_resp = _try_health_check(base, timeout=3)
-            if health_ok:
-                # server awake — do POST
-                success, resp_or_exc = _post_payload_with_timeout(FASTAPI_URL, payload, timeout_seconds=SINGLE_TRY_TIMEOUT)
-                if success and _verify_response_json(resp_or_exc):
-                    resp = resp_or_exc
+            # Attempt POST again with short timeout
+            success, resp_or_exc = _post_payload_with_timeout(FASTAPI_URL, payload, timeout_seconds=SINGLE_TRY_TIMEOUT)
+            if success:
+                resp = resp_or_exc
+                if _verify_response_json(resp):
                     verified = True
                     break
-            else:
-                # try POST directly in case server starts accepting POST without health
-                success, resp_or_exc = _post_payload_with_timeout(FASTAPI_URL, payload, timeout_seconds=SINGLE_TRY_TIMEOUT)
-                if success and _verify_response_json(resp_or_exc):
-                    resp = resp_or_exc
-                    verified = True
-                    break
-
-            # wait until next poll or until time runs out
+                else:
+                    # got a response but doesn't look valid yet, continue polling
+                    verified = False
+            # wait before next try (but break early if time's up)
             time_to_next = min(POLL_INTERVAL_SECONDS, max(0, deadline - time.time()))
             if time_to_next <= 0:
                 break
             time.sleep(time_to_next)
 
-    # cleanup progress UI
+    # clear progress UI
     progress_bar.empty()
     progress_text.empty()
-    wake_card.empty()
 
-    # Present verified response or error
+    # After polling: check if we have a verified response
     if verified and resp is not None:
         try:
             result = resp.json()
         except Exception as e:
             result_card.markdown(
                 '<div class="card"><strong style="color:#b91c1c">Error</strong><div style="color:#475569">'
-                f'Failed to parse response JSON: {str(e)}</div></div>',
+                f'Failed to parse response JSON: {str(e)}'
+                '</div></div>',
                 unsafe_allow_html=True)
             charts_card.empty()
         else:
-            # render result (same as original UI)
+            # proceed with rendering result (same as before)
             pred_label = result.get("prediction", None)
             prob = result.get("probability_of_leaving", None)
             message = result.get("message", "")
@@ -433,7 +357,7 @@ if submit_btn:
             plt.tight_layout()
 
             cats = {"OverTime": overtime, "Gender": gender, "Marital": maritalstatus}
-            cat_values = [1, 1, 1]
+            cat_values = [1, 1, 1]  
             fig2, ax2 = plt.subplots(figsize=(4, 3.6))
             wedges, texts = ax2.pie(cat_values, wedgeprops=dict(width=0.5), startangle=-40)
             ax2.legend(wedges, [f"{k}: {v}" for k, v in cats.items()], title="Categories", loc="center left", bbox_to_anchor=(1, 0.5))
@@ -461,13 +385,13 @@ if submit_btn:
         # show helpful troubleshooting info
         result_card.markdown(
             '<div class="card"><strong style="color:#b91c1c">Error</strong>'
-            '<div style="color:#475569">Could not get a verified response from the backend within the allotted time (≈{} seconds).<br>'
+            '<div style="color:#475569">Could not get a verified response from the backend within the allotted time (≈1 minute).<br>'
             'Possible reasons:<ul>'
             '<li>The hosting service (Render) is sleeping and did not wake in time.</li>'
             '<li>Backend error or wrong FASTAPI_URL.</li>'
             '<li>Temporary network issues.</li>'
             '</ul>'
-            'Try again, or check your service logs. If you expect long cold-starts, increase the wait timeout in the sidebar.</div></div>'.format(MAX_WAIT_SECONDS),
+            'Try again, or check your service logs. If you expect long cold-starts, increase the wait timeout in the app.</div></div>',
             unsafe_allow_html=True
         )
         charts_card.empty()
