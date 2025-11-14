@@ -15,7 +15,7 @@ RUN uv sync --locked
 COPY predict.py xgboost_model.bin dv.bin requirements.txt ./ 
 
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
+
 EXPOSE 3000
 
 CMD ["uvicorn", "predict:app", "--host", "0.0.0.0", "--port", "3000"]
