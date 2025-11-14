@@ -1,6 +1,6 @@
 import requests
 
-url = 'http://127.0.0.1:8000/predict'
+url = 'http://localhost:3000/predict'
 
 employee ={
   "age": 49,
