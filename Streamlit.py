@@ -4,14 +4,14 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# ---------- CONFIG ----------
+
 FASTAPI_URL = "https://ibm-hr-midterm-project.onrender.com/predict"  # change if needed
 
 st.set_page_config(page_title="Employee Attrition — Predict & Visualize",
                    layout="wide",
                    initial_sidebar_state="collapsed")
 
-# ---------- CUSTOM CSS ----------
+
 st.markdown(
     """
     <style>
@@ -64,17 +64,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ---------- HEADER ----------
+
 st.markdown('<div class="card"><div class="title">🏢 Employee Attrition Predictor</div>'
             '<div class="subtitle">Fill employee details (left) and click Predict. See charts & summary on the right.</div></div>',
             unsafe_allow_html=True)
 
-# ---------- LAYOUT ----------
+
 left_col, right_col = st.columns([1, 1.2], gap="large")
 
 with left_col:
     with st.form("prediction_form", clear_on_submit=False):
-        # group inputs in compact form
+        
         st.markdown('<div class="card"> <strong>Employee information</strong></div>', unsafe_allow_html=True)
 
         c1, c2 = st.columns(2)
@@ -102,7 +102,7 @@ with left_col:
             maritalstatus = st.selectbox("Marital Status", ["Single", "Married", "Divorced"])
             monthlyincome = st.number_input("Monthly Income", min_value=0, max_value=500000, value=5000)
 
-        # more numeric fields in a compact row
+        
         st.markdown("**More details**")
         t1, t2, t3, t4 = st.columns(4)
         with t1:
@@ -143,11 +143,11 @@ with left_col:
         submit_btn = st.form_submit_button("Predict")
 
 with right_col:
-    # result card
+    
     result_card = st.empty()
     charts_card = st.empty()
 
-# ---------- PREDICTION & VISUALS ----------
+
 if 'submit_btn' not in st.session_state:
     st.session_state['submit_btn'] = False
 
@@ -198,23 +198,23 @@ if submit_btn:
             '</div></div>',
             unsafe_allow_html=True)
     else:
-        # extract
+        
         pred_label = result.get("prediction", None)
         prob = result.get("probability_of_leaving", None)
         message = result.get("message", "")
 
-        # RESULT CARD (top)
+       
         prob_pct = None
         try:
             prob_pct = float(prob)
         except Exception:
             prob_pct = None
 
-        # human friendly
+       
         status_color = "#ef4444" if pred_label == 1 else "#059669"
         status_text = "AT RISK — MAY LEAVE" if pred_label == 1 else "STABLE — LIKELY TO STAY"
 
-        # render result card
+        
         result_card.markdown(
             f'''
             <div class="card">
@@ -258,8 +258,7 @@ if submit_btn:
             unsafe_allow_html=True
         )
 
-        # CHARTS
-        # 1) Bar chart of numeric fields
+        
         numeric_df = pd.DataFrame({
             "feature": ["Age", "Monthly Income", "Total Working Years", "Years at Company"],
             "value": [age, monthlyincome, totalworkingyears, yearsatcompany]
@@ -272,17 +271,17 @@ if submit_btn:
         ax1.grid(axis="y", linestyle="--", alpha=0.3)
         plt.tight_layout()
 
-        # 2) Donut chart for categorical quick breakdown (overtime, gender, maritalstatus)
+        
         cats = {"OverTime": overtime, "Gender": gender, "Marital": maritalstatus}
         cat_names = list(cats.keys())
-        cat_values = [1, 1, 1]  # we display categorical values as equal slices but label them
+        cat_values = [1, 1, 1]  
         fig2, ax2 = plt.subplots(figsize=(4, 3.6))
         wedges, texts = ax2.pie(cat_values, wedgeprops=dict(width=0.5), startangle=-40)
         ax2.legend(wedges, [f"{k}: {v}" for k, v in cats.items()], title="Categories", loc="center left", bbox_to_anchor=(1, 0.5))
         ax2.set_title("Categorical snapshot")
         plt.tight_layout()
 
-        # display charts
+       
         with charts_card.container():
             st.markdown('<div class="card"><strong>Visuals</strong></div>', unsafe_allow_html=True)
             c1, c2 = st.columns([1, 0.7])
@@ -291,7 +290,7 @@ if submit_btn:
             with c2:
                 st.pyplot(fig2)
 
-        # small explanation / tips
+        
         st.markdown(
             """
             <div style="margin-top:8px; color:#475569;">
