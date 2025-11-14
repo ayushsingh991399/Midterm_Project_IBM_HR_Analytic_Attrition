@@ -161,6 +161,7 @@ python train.py
 # ⚡ 7. FastAPI Deployment (Backend)
 
 API is implemented in **main.py**.
+**API** Link : https://ibm-hr-midterm-project.onrender.com/docs
 
 ### Run API:
 
@@ -178,6 +179,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 # 🎨 8. Streamlit Deployment (Frontend)
 
 Frontend implemented in **Streamlit.py**.
+**Streamlit.py** Link : https://ibm-hr-analytic-attrition.streamlit.app/
 
 ### Launch Streamlit UI:
 
@@ -210,6 +212,7 @@ uv pip install -r requirements.txt
 # 🐳 10. Dockerization
 
 Project includes a full **Dockerfile**.
+**Dockerfile** Link : https://hub.docker.com/repository/docker/ayushgurjar10/ibm_hr_midterm_project/general
 
 ### Build image:
 
@@ -230,13 +233,13 @@ docker run -p 8000:8000 attrition-app
 Cloud deployment screenshots:
 
 ### **1️⃣ Build & Upload**
-<img src="Screenshot 2025-11-14 183608.png" width="800">
+<img src="Screenshot 2025-11-14 183638.png" width="800">
 
 ### **2️⃣ Deployment Successful**
 <img src="Screenshot 2025-11-14 183618.png" width="800">
 
 ### **3️⃣ API Running Online**
-<img src="Screenshot 2025-11-14 183638.png" width="800">
+<img src="Screenshot 2025-11-14 183608.png" width="800">
 
 ### **4️⃣ Prediction Tested Live**
 <img src="Screenshot 2025-11-14 183724.png" width="800">
@@ -285,9 +288,9 @@ docker run -p 8000:8000 attrition-app
 | Model Deployment | **1/1** |
 | Dependency Management | **2/2** |
 | Containerization | **2/2** |
-| Cloud Deployment | **1/2** |
+| Cloud Deployment | **2/2** |
 
-**Total Score: 15/16**
+**Total Score: 16/16**
 
 ---
 
